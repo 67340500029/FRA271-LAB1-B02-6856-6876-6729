@@ -1,0 +1,47 @@
+% ====================================================
+% MATLAB Interactive Data Collection Script (Append Mode)
+% ====================================================
+model_name = bdroot;
+display_block = [model_name '/Display8']; 
+filename = 'Magnetic_Sensor_Data1.csv';
+
+% **ส่วนที่เพิ่ม: เช็คว่ามีไฟล์เดิมไหม ถ้ามีให้โหลดมาทำต่อ**
+if exist(filename, 'file') == 2
+    try
+        old_T = readtable(filename);
+        data_log = table2array(old_T);
+        fprintf('>> พบไฟล์เดิม! โหลดข้อมูลเก่ามา %d แถวเรียบร้อย\n\n', size(data_log, 1));
+    catch
+        data_log = [];
+    end
+else
+    data_log = [];
+end
+
+fprintf('=== เริ่มต้นระบบบันทึกข้อมูลสนามแม่เหล็ก ===\n\n');
+
+while true
+    d = input('กรอกระยะห่าง d (mm) [พิมพ์ -1 เพื่อจบการบันทึก]: ');
+    if d == -1
+        break;
+    end
+    
+    try
+        rto = get_param(display_block, 'RuntimeObject');
+        b_val = rto.InputPort(1).Data;
+        
+        data_log = [data_log; d, b_val];
+        fprintf('>> บันทึกสำเร็จ: Distance = %.2f mm | B = %.4f mT\n\n', d, b_val);
+    catch
+        fprintf('>> เกิดข้อผิดพลาด: กรุณาตรวจสอบว่ากด Run Simulink อยู่ และชื่อบล็อก Display ถูกต้อง\n\n');
+    end
+end
+
+if ~isempty(data_log)
+    T = array2table(data_log, 'VariableNames', {'Distance_mm', 'B_mT'});
+    disp('=== ตารางผลการทดลอง ===');
+    disp(T);
+    
+    writetable(T, filename);
+    fprintf('บันทึกไฟล์ "%s" เรียบร้อยแล้ว!\n', filename);
+end
