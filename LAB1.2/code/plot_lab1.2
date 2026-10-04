@@ -1,0 +1,28 @@
+% ข้อมูลจากตารางของคุณ
+Distance_mm = [43, 40, 37, 34, 31, 28, 25, 22, 19, 16, 13];
+B_mT = [0.42962
+, 0.46945
+, 0.72011
+, 1.11801
+, 1.37484
+, 2.1052
+, 3.15542
+, 4.21226
+, 6.78339
+, 12.64055
+, 16.06192
+];
+
+
+plot(Distance_mm, B_mT, '-o', 'LineWidth', 2, 'MarkerSize', 8, 'MarkerFaceColor', 'b');
+grid on;
+xlabel('Distance, d (mm)', 'FontSize', 12, 'FontWeight', 'bold');
+ylabel('Magnetic Flux Density, B (mT)', 'FontSize', 12, 'FontWeight', 'bold');
+title('Magnetic Flux Density vs Distance (DRV5055)', 'FontSize', 14);
+
+% ขยายช่วงแกน X ให้ครอบคลุมระยะ 0 ถึง 45 mm
+xlim([0 45]); 
+ylim([0 18]);
+
+% เซฟรูปความคมชัดสูงสำหรับใส่รายงาน
+exportgraphics(gcf, 'Linearity_Full_Graph.png', 'Resolution', 300);

@@ -1,0 +1,91 @@
+% ====================================================
+% MATLAB Real-Time Plotting Script (Fixed Axis Limit Bug)
+% ====================================================
+model_name = bdroot;
+display_block = [model_name '/Display8']; 
+excel_filename = 'S_poledistanceUS3.xlsx';
+image_filename = 'S_poledistanceUS3.png';
+
+data_log = [];
+
+fig = figure('Color', 'k', 'Name', 'Magnetic Flux Density / Distance');
+ax = axes(fig);
+set(ax, 'Color', 'k');
+
+fprintf('=== เริ่มต้นระบบวัดและพล็อตกราฟสด (Dark Mode) ===\n\n');
+
+while true
+    d = input('กรอกระยะห่าง d (mm) [พิมพ์ -1 เพื่อจบ]: ');
+    if d == -1
+        break;
+    end
+    
+    % 1. ดึงข้อมูลจาก Simulink (แยก try-catch เฉพาะจุดนี้)
+    try
+        rto = get_param(display_block, 'RuntimeObject');
+        b_val = rto.InputPort(1).Data;
+    catch
+        fprintf('>> เกิดข้อผิดพลาด: ไม่พบบล็อก Simulink หรือยังไม่ได้กด Run Simulink\n\n');
+        continue; % ถ้าอ่านไม่ได้ให้ข้ามไปรับค่าใหม่ ไม่บันทึกข้อมูล
+    end
+    
+    % 2. บันทึกข้อมูล
+    data_log = [data_log; d, b_val];
+    data_sorted = sortrows(data_log, 1);
+    
+    % 3. พล็อตกราฟ
+    plot(ax, data_sorted(:,1), data_sorted(:,2), '-o', ...
+        'LineWidth', 2.5, ...
+        'MarkerSize', 8, ...
+        'MarkerFaceColor', [0 0.8 1], ... 
+        'Color', [0 0.8 1]);              
+    
+    % 4. ปรับขอบแกน X (จะปรับ Tight เฉพาะเมื่อระยะต่างกันอย่างน้อย 2 ค่าขึ้นไป)
+    x_start = data_sorted(1,1);
+    x_end = data_sorted(end,1);
+    if x_start < x_end
+        xlim(ax, [x_start, x_end]);
+        set(ax, 'XTick', floor(x_start):2:ceil(x_end));
+    else
+        set(ax, 'XLimMode', 'auto', 'XTickMode', 'auto');
+    end
+    
+    % 5. ปรับขอบแกน Y
+    y_min = floor(min(data_sorted(:,2)));
+    y_max = ceil(max(data_sorted(:,2)));
+    if y_min < y_max
+        set(ax, 'YTick', y_min:1:y_max);
+    else
+        set(ax, 'YTickMode', 'auto');
+    end
+    
+    % 6. ตกแต่งความสวยงาม
+    set(ax, 'XGrid', 'on', 'YGrid', 'on', ...
+            'XMinorGrid', 'on', 'YMinorGrid', 'on', ...
+            'XColor', 'w', 'YColor', 'w', ...
+            'GridColor', [0.5 0.5 0.5], 'GridAlpha', 0.5, ...
+            'MinorGridColor', [0.3 0.3 0.3], 'MinorGridAlpha', 0.5, ...
+            'FontSize', 12, 'LineWidth', 1.2);
+    
+    xlabel(ax, 'Distance, d (mm)', 'FontSize', 20, 'FontWeight', 'bold', 'Color', 'w');
+    ylabel(ax, 'Magnetic Flux Density, B (mT)', 'FontSize', 20, 'FontWeight', 'bold', 'Color', 'w');
+    title(ax, 'Magnetic Flux Density / Distance', 'FontSize', 22, 'FontWeight', 'bold', 'Color', 'w');
+    
+    drawnow;
+    fprintf('>> บันทึกสำเร็จ: Distance = %.2f mm | B = %.4f mT\n\n', d, b_val);
+end
+
+% 7. บันทึกผลลัพธ์ลง Excel และ PNG
+if ~isempty(data_log)
+    data_sorted = sortrows(data_log, 1);
+    
+    T = array2table(data_sorted, 'VariableNames', {'Distance_mm', 'B_mT'});
+    disp('=== ตารางสรุปผลการวัดทั้งหมด ===');
+    disp(T);
+    
+    writetable(T, excel_filename);
+    fprintf('\n [SUCCESS] บันทึกข้อมูลลงไฟล์ Excel "%s" เรียบร้อยแล้ว!\n', excel_filename);
+    
+    exportgraphics(fig, image_filename, 'BackgroundColor', 'current', 'Resolution', 300);
+    fprintf(' [SUCCESS] บันทึกรูปกราฟความละเอียดสูง "%s" เรียบร้อยแล้ว!\n', image_filename);
+end
