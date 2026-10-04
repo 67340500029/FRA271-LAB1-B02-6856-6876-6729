@@ -1,0 +1,102 @@
+% =========================================================================
+% MATLAB Automated Data Logger & Dark Mode Plotter
+% =========================================================================
+clc; clear; close all;
+
+%% 1. ตั้งค่าสเกลหน้าบอร์ด
+scale = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]; 
+angle = scale * 3; % แปลงเป็นองศา (0 - 300 deg)
+num_pts = length(scale);
+data_matrix = zeros(3, num_pts);
+
+disp('============================================================');
+disp('   ระบบบันทึกผลการทดลองอัตโนมัติ (Automated Data Logger)');
+disp('============================================================');
+disp('คำแนะนำ: โปรดเปิด Simulink ให้รันอยู่ตลอดเวลา');
+disp('เมื่อหมุนลูกบิดตรงขีดสเกลแล้ว ให้กด [Enter] เพื่อบันทึกค่า');
+disp('------------------------------------------------------------');
+
+%% 2. ลูปรับข้อมูลอัตโนมัติ 3 รอบ (Triplicate)
+for r = 1:3
+    fprintf('\n=========================================\n');
+    fprintf('  เริ่มเก็บข้อมูล รอบที่ %d / 3\n', r);
+    fprintf('=========================================\n');
+    
+    for i = 1:num_pts
+        % แจ้งเตือนผู้ใช้ให้หมุนปรับสเกล
+        fprintf('-> หมุนไปที่สเกล %3d (%3d องศา) แล้วกด [Enter]... ', scale(i), angle(i));
+        input('', 's'); % รอการกด Enter จากผู้ใช้
+        
+        % อ่านค่าจาก Simulink ผ่านตัวแปร v_measured ใน Base Workspace
+        try
+            v_data = evalin('base', 'v_measured');
+            if isstruct(v_data) || isa(v_data, 'timeseries')
+                current_v = v_data.Data(end); % อ่านค่าล่าสุด
+            else
+                current_v = v_data(end);
+            end
+            
+            data_matrix(r, i) = current_v;
+            fprintf(' [บันทึกสำเร็จ] ค่าที่อ่านได้ = %.2f mV\n', current_v);
+        catch
+            error('ไม่พบตัวแปร v_measured! กรุณาเช็คว่าต่อบล็อก To Workspace และกด Run Simulink แล้วหรือยัง');
+        end
+    end
+end
+
+% แยกข้อมูลออกเป็น 3 รอบ
+trial1 = data_matrix(1, :);
+trial2 = data_matrix(2, :);
+trial3 = data_matrix(3, :);
+
+%% 3. คำนวณค่าทางสถิติ (ค่าเฉลี่ย และ SD)
+v_mean = mean(data_matrix, 1);
+v_sd   = std(data_matrix, 0, 1);
+
+%% 4. แสดงตารางสรุปผลใน Command Window
+disp(' ');
+disp('============================================================');
+disp('                  ตารางสรุปผลการทดลอง');
+disp('============================================================');
+summary_table = table(scale', angle', v_mean', v_sd', ...
+    'VariableNames', {'Scale', 'Angle_deg', 'Mean_Voltage_mV', 'SD'});
+disp(summary_table);
+
+%% 5. พล็อตกราฟผลการทดลอง (Dark Mode + Fine Grid)
+fig = figure('Name', 'Potentiometer Response Plot', 'Color', 'k');
+
+errorbar(angle, v_mean, v_sd, '-o', ...
+         'LineWidth', 2, ...
+         'MarkerSize', 6, ...
+         'Color', [0 1 1], ...          % เส้นฟ้า Cyan
+         'MarkerEdgeColor', [0 1 1], ...
+         'MarkerFaceColor', [1 1 0], ... % จุดเหลือง
+         'DisplayName', 'Measured Voltage (Mean \pm SD)');
+
+grid on;
+grid minor;
+
+ax = gca;
+ax.Color = 'k';           
+ax.XColor = 'w';          
+ax.YColor = 'w';          
+ax.FontSize = 10;
+
+ax.XTick = 0:30:300;      
+ax.YTick = 0:250:3500;    
+
+ax.GridColor = 'w';       
+ax.GridAlpha = 0.35;      
+ax.MinorGridColor = 'w';  
+ax.MinorGridAlpha = 0.15; 
+
+xlabel('Angle (Degree)', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'w');
+ylabel('Output Voltage (mV)', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'w');
+title('Potentiometer Voltage vs Angle Characteristic', 'FontSize', 14, 'Color', 'w');
+xlim([-10, 310]);
+ylim([-100, 3400]);
+
+lgd = legend('Location', 'northwest', 'FontSize', 11);
+lgd.Color = [0.15 0.15 0.15]; 
+lgd.TextColor = 'w';          
+lgd.EdgeColor = 'w';

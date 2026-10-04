@@ -1,0 +1,117 @@
+% =========================================================================
+% MATLAB Automated Data Logger (Updated for 0-100% Dial Scale)
+% =========================================================================
+clc; clear; close all;
+
+%% 1. ตั้งค่าสเกลหน้าบอร์ด (0 - 100% Rotation)
+scale = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]; % สเกลเปอร์เซ็นต์บนหน้าบอร์ด
+num_pts = length(scale);
+data_matrix = zeros(3, num_pts);
+
+% หาชื่อโมเดล Simulink ที่กำลังเปิดและ Run อยู่
+sys = bdroot;
+if isempty(sys)
+    error('กรุณาเปิดและ Run โมเดล Simulink ก่อนเริ่มรันสคริปต์นี้');
+end
+
+disp('============================================================');
+disp('   ระบบบันทึกผลการทดลองอัตโนมัติ (Automated Data Logger)');
+disp('============================================================');
+disp('คำแนะนำ:');
+disp(' 1. กด Run โมเดล Simulink ทิ้งไว้');
+disp(' 2. หมุน Potentiometer ไปตามสเกลเปอร์เซ็นต์ที่กำหนด (0 - 100%)');
+disp(' 3. คลิก Command Window แล้วกด [Enter] เปล่าๆ เพื่อบันทึกค่า');
+disp('------------------------------------------------------------');
+
+%% 2. ลูปรับข้อมูลอัตโนมัติ 3 รอบ (Triplicate)
+for r = 1:3
+    fprintf('\n=========================================\n');
+    fprintf('  เริ่มเก็บข้อมูล รอบที่ %d / 3\n', r);
+    fprintf('=========================================\n');
+    
+    for i = 1:num_pts
+        fprintf('-> หมุนไปที่สเกล %3d%% แล้วกด [Enter]... ', scale(i));
+        drawnow;
+        
+        % รอการกด Enter เปล่าๆ (ห้ามพิมพ์ตัวเลข)
+        user_in = input('', 's'); 
+        
+        current_v = [];
+        
+        % สั่ง Pause Simulink ชั่วคราวเพื่อให้ flush ค่าลง Workspace
+        try
+            set_param(sys, 'SimulationCommand', 'pause');
+            pause(0.1);
+            
+            % ดึงค่าแรงดัน (mV) จาก Base Workspace (v_measured)
+            if evalin('base', 'exist(''out'', ''var'')')
+                out_obj = evalin('base', 'out');
+                if isprop(out_obj, 'v_measured') || isfield(out_obj, 'v_measured')
+                    v_data = out_obj.v_measured;
+                else
+                    v_data = evalin('base', 'v_measured');
+                end
+            else
+                v_data = evalin('base', 'v_measured');
+            end
+            
+            if isa(v_data, 'timeseries')
+                current_v = v_data.Data(end);
+            elseif isstruct(v_data)
+                current_v = v_data.signals.values(end);
+            else
+                current_v = v_data(end);
+            end
+            
+            % สั่งให้ Simulink รันต่อ
+            set_param(sys, 'SimulationCommand', 'continue');
+        catch
+            try set_param(sys, 'SimulationCommand', 'continue'); catch; end
+            current_v = [];
+        end
+        
+        % บันทึกผลและแสดงค่า
+        if ~isempty(current_v) && isnumeric(current_v) && ~isnan(current_v)
+            fprintf(' [บันทึกสำเร็จ] = %.2f mV\n', current_v);
+            data_matrix(r, i) = current_v;
+        else
+            % สำรองกรณีอ่านอัตโนมัติไม่ได้
+            val = str2double(user_in);
+            if isnan(val)
+                val = str2double(input('   (อ่านอัตโนมัติไม่พบ) พิมพ์ค่า mV จากจอ Display: ', 's'));
+            end
+            if isnan(val), val = 0; end
+            fprintf('   [บันทึกแบบป้อนมือ] = %.2f mV\n', val);
+            data_matrix(r, i) = val;
+        end
+    end
+end
+
+%% 3. ประมวลผลและพล็อตกราฟ Dark Mode
+v_mean = mean(data_matrix, 1);
+v_sd   = std(data_matrix, 0, 1);
+
+fig = figure('Name', 'Potentiometer Response Plot', 'Color', 'k');
+
+errorbar(scale, v_mean, v_sd, '-o', ...
+         'LineWidth', 2, ...
+         'MarkerSize', 6, ...
+         'Color', [0 1 1], ...
+         'MarkerEdgeColor', [0 1 1], ...
+         'MarkerFaceColor', [1 1 0], ...
+         'DisplayName', 'Measured Voltage (Mean \pm SD)');
+
+grid on; grid minor;
+ax = gca; 
+ax.Color = 'k'; ax.XColor = 'w'; ax.YColor = 'w'; ax.FontSize = 10;
+ax.XTick = 0:10:100; ax.YTick = 0:250:3500;
+ax.GridColor = 'w'; ax.GridAlpha = 0.35; 
+ax.MinorGridColor = 'w'; ax.MinorGridAlpha = 0.15;
+
+xlabel('Rotation Percentage (%)', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'w');
+ylabel('Output Voltage (mV)', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'w');
+title('Potentiometer Voltage vs Rotation Percentage Characteristic', 'FontSize', 14, 'Color', 'w');
+xlim([-5, 105]); ylim([-100, 3400]);
+
+lgd = legend('Location', 'northwest', 'FontSize', 11);
+lgd.Color = [0.15 0.15 0.15]; lgd.TextColor = 'w'; lgd.EdgeColor = 'w';

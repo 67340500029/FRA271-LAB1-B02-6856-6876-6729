@@ -1,0 +1,72 @@
+% =========================================================================
+% MATLAB Script: Lab Data Processing & Plotting (Dark Mode + Fine Grid)
+% กรอกค่าแรงดันไฟฟ้า (mV) หรือ Raw ADC ที่อ่านได้ลงในอาร์เรย์ trial1, trial2, trial3
+% =========================================================================
+clc; clear; close all;
+
+%% 1. สเกลหน้าบอร์ด (0 - 100) และคำนวณเป็นมุมองศา (0 - 300 deg)
+scale = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]; 
+angle = scale * 3; % แปลงเป็นองศาทางกายภาพ
+
+%% 2. กรอกข้อมูลแรงดันไฟฟ้า (mV) ที่อ่านได้จริงจากการทดลอง 3 รอบ (Triplicate)
+trial1 = [0,  20,  67.7,  150,  350,  700,  1200,  1800,  2400,  2850,  3300]; % รอบที่ 1
+trial2 = [0,  18,  66.5,  148,  352,  695,  1205,  1795,  2405,  2845,  3295]; % รอบที่ 2
+trial3 = [0,  22,  68.0,  152,  348,  705,  1195,  1805,  2395,  2855,  3305]; % รอบที่ 3
+
+%% 3. คำนวณค่าทางสถิติ (ค่าเฉลี่ย และ SD)
+data_all = [trial1; trial2; trial3];
+v_mean   = mean(data_all, 1); % ค่าเฉลี่ยแรงดัน (mV)
+v_sd     = std(data_all, 0, 1);  % ค่าเบี่ยงเบนมาตรฐาน (SD)
+
+%% 4. แสดงตารางสรุปผลใน Command Window
+disp('============================================================');
+disp('                  ตารางสรุปผลการทดลอง');
+disp('============================================================');
+summary_table = table(scale', angle', v_mean', v_sd', ...
+    'VariableNames', {'Scale', 'Angle_deg', 'Mean_Voltage_mV', 'SD'});
+disp(summary_table);
+
+%% 5. พล็อตกราฟผลการทดลอง (Dark Mode + Detailed Grid)
+fig = figure('Name', 'Potentiometer Response Plot', 'Color', 'k');
+
+% พล็อตกราฟด้วยสีสว่าง (Cyan + Yellow)
+errorbar(angle, v_mean, v_sd, '-o', ...
+         'LineWidth', 2, ...
+         'MarkerSize', 6, ...
+         'Color', [0 1 1], ...          % เส้นกราฟสีฟ้าสว่าง (Cyan)
+         'MarkerEdgeColor', [0 1 1], ...
+         'MarkerFaceColor', [1 1 0], ... % จุด Marker สีเหลืองสด
+         'DisplayName', 'Measured Voltage (Mean \pm SD)');
+
+% เปิดทั้ง Grid หลัก และ Grid ย่อย (Minor Grid)
+grid on;
+grid minor;
+
+% ตั้งค่าแกน ตัวอักษร และสเกลที่ละเอียดขึ้น
+ax = gca;
+ax.Color = 'k';           % พื้นหลังด้านในกราฟสีดำ
+ax.XColor = 'w';          % ตัวเลข/ขีดแกน X สีขาว
+ax.YColor = 'w';          % ตัวเลข/ขีดแกน Y สีขาว
+ax.FontSize = 10;
+
+% กำหนดสเกลแกน X และ Y ให้ละเอียดขึ้น
+ax.XTick = 0:30:300;      % แบ่งสเกลแกน X ทีละ 30 องศา
+ax.YTick = 0:250:3500;    % แบ่งสเกลแกน Y ทีละ 250 mV (ละเอียดขึ้น)
+
+% ตั้งค่าสีและความโปร่งแสงของเส้น Grid ใน Dark Mode
+ax.GridColor = 'w';       % เส้น Grid หลักสีขาว
+ax.GridAlpha = 0.35;      % ความเข้มเส้น Grid หลัก
+ax.MinorGridColor = 'w';  % เส้น Grid ย่อยสีขาว
+ax.MinorGridAlpha = 0.15; % ความเข้มเส้น Grid ย่อย
+
+xlabel('Angle (Degree)', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'w');
+ylabel('Output Voltage (mV)', 'FontSize', 12, 'FontWeight', 'bold', 'Color', 'w');
+title('Potentiometer Voltage vs Angle Characteristic', 'FontSize', 14, 'Color', 'w');
+xlim([-10, 310]);
+ylim([-100, 3400]);
+
+% ปรับสไตล์ Legend กล่องอธิบายสัญลักษณ์
+lgd = legend('Location', 'northwest', 'FontSize', 11);
+lgd.Color = [0.15 0.15 0.15]; 
+lgd.TextColor = 'w';          
+lgd.EdgeColor = 'w';
