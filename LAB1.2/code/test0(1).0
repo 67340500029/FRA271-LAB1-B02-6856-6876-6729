@@ -1,0 +1,42 @@
+% ====================================================
+% MATLAB Interactive Data Collection Script
+% ====================================================
+model_name = bdroot; % ดึงชื่อโมเดล Simulink ที่เปิดอยู่อัตโนมัติ
+
+% **แก้ชื่อ 'Display1' ให้ตรงกับชื่อบล็อก Display ตัวล่างสุดใน Simulink ของคุณ**
+display_block = [model_name '/Display8']; 
+
+data_log = []; % อาร์เรย์สำหรับเก็บข้อมูล [ระยะทาง (mm), ค่า B (mT)]
+fprintf('=== เริ่มต้นระบบบันทึกข้อมูลสนามแม่เหล็ก ===\n\n');
+
+while true
+    % รับค่าระยะทางจากผู้ใช้งาน
+    d = input('กรอกระยะห่าง d (mm) [พิมพ์ -1 เพื่อจบการบันทึก]: ');
+    if d == -1
+        break;
+    end
+
+    % ดึงค่า B ล่าสุดจาก Display ใน Simulink แบบ Real-time
+    try
+        rto = get_param(display_block, 'RuntimeObject');
+        b_val = rto.InputPort(1).Data;
+
+        % บันทึกค่าลงอาร์เรย์
+        data_log = [data_log; d, b_val];
+        fprintf('>> บันทึกสำเร็จ: Distance = %.2f mm | B = %.4f mT\n\n', d, b_val);
+    catch
+        fprintf('>> เกิดข้อผิดพลาด: กรุณาตรวจสอบว่ากด Run Simulink อยู่ และชื่อบล็อก Display ถูกต้อง\n\n');
+    end
+end
+
+% แสดงตารางสรุปผลและส่งออกเป็นไฟล์ CSV
+if ~isempty(data_log)
+    T = array2table(data_log, 'VariableNames', {'Distance_mm', 'B_mT'});
+    disp('=== ตารางผลการทดลอง ===');
+    disp(T);
+
+    % บันทึกเป็นไฟล์ CSV สำหรับเปิดใน Excel หรือนำไปพล็อตกราฟ
+    filename = 'Magnetic_Sensor_Data1.csv';
+    writetable(T, filename);
+    fprintf('บันทึกไฟล์ "%s" เรียบร้อยแล้ว!\n', filename);
+end
