@@ -1,0 +1,77 @@
+% =========================================================================
+% MATLAB Script: Load Cell Output Signal vs Input Mass & SI Derived Force
+% =========================================================================
+clear; clc; close all;
+
+% 1. ข้อมูลการทดลองจาก Excel
+actual_kg  = 0:10; % สัญญาณ Input (มวล, kg)
+avg_mv     = [140.5992, 421.6232, 689.0920, 1016.2060, 1367.1440, ...
+    1849.9170, 2233.8780, 2605.9180, 3012.2730, 3289.3470, 3297.9410]; % สัญญาณ Output (mV)
+
+% 2. แปลงสัญญาณ Input เป็นแรงกดเชิงกลในหน่วย SI Derived (Newton, N)
+g = 9.80665; % ความเร่งเนื่องจากแรงโน้มถ่วง (m/s^2)
+force_N = actual_kg * g; % แรง F = m*g (N)
+
+% -------------------------------------------------------------------------
+% สร้าง Figure แบบ Dark Theme แบ่ง 2 Subplots
+% -------------------------------------------------------------------------
+fig = figure('Color', 'k', 'Position', [100, 100, 950, 680]);
+
+% --- Subplot 1: สัญญาณ Output (mV) เทียบกับ Input Mass (kg) ---
+ax1 = subplot(2, 1, 1, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax1, 'on');
+
+% พล็อตช่วงการทำงานเชิงเส้น Linear Range (0 - 8 kg)
+plot(ax1, actual_kg(1:9), avg_mv(1:9), '-o', 'Color', [0.2, 0.9, 0.4], ...
+    'LineWidth', 2.2, 'MarkerSize', 7, 'MarkerFaceColor', [0.2, 0.9, 0.4], ...
+    'DisplayName', 'Linear Operating Range (0-8 kg)');
+
+% พล็อตช่วงแรงดันอิ่มตัว Saturation Region (9 - 10 kg)
+plot(ax1, actual_kg(9:11), avg_mv(9:11), '-s', 'Color', [1.0, 0.3, 0.3], ...
+    'LineWidth', 2.2, 'MarkerSize', 8, 'MarkerFaceColor', [1.0, 0.3, 0.3], ...
+    'DisplayName', 'Saturation Region (9-10 kg)');
+
+% เส้นเพดานแรงดันอิ่มตัว Vsat = 3300 mV (3.3V)
+yline(ax1, 3300, '--', 'V_{sat} \approx 3.3 V (3300 mV)', 'Color', [1.0, 0.8, 0.2], ...
+    'LineWidth', 1.5, 'LabelHorizontalAlignment', 'left');
+
+% เส้นแบ่งโซน Saturation
+xline(ax1, 8.5, ':', 'Saturation Boundary', 'Color', [0.7, 0.7, 0.7], 'LineWidth', 1.5);
+
+title(ax1, 'Load Cell Output Signal (mV) vs. Input Mass (kg)', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax1, 'Input Mass, Actual\_kg (kg)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax1, 'Output Voltage, Average\_mV (mV)', 'Color', 'w', 'FontSize', 10);
+grid(ax1, 'on'); box(ax1, 'on'); ax1.GridColor = [0.4 0.4 0.4]; ax1.GridAlpha = 0.5;
+legend(ax1, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'southeast');
+xlim(ax1, [-0.5, 10.5]); ylim(ax1, [0, 3600]);
+
+% แสดงค่าแรงดัน Output บนจุดพล็อต
+for i = 1:length(actual_kg)
+    text(ax1, actual_kg(i), avg_mv(i) + 120, sprintf('%.1f mV', avg_mv(i)), ...
+        'Color', 'w', 'FontSize', 7.5, 'HorizontalAlignment', 'center');
+end
+hold(ax1, 'off');
+
+% --- Subplot 2: สัญญาณ Output เทียบกับ แรงในหน่วย SI Derived (Newton, N) ---
+ax2 = subplot(2, 1, 2, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax2, 'on');
+
+plot(ax2, force_N(1:9), avg_mv(1:9), '-d', 'Color', [0.35, 0.7, 1.0], ...
+    'LineWidth', 2.0, 'MarkerSize', 6, 'MarkerFaceColor', [0.35, 0.7, 1.0], ...
+    'DisplayName', 'Output Signal vs Input Force (N)');
+
+% คำนวณความไวเชิงเส้น (Linear Sensitivity S = dV/dF)
+p = polyfit(force_N(1:9), avg_mv(1:9), 1);
+fit_y = polyval(p, force_N(1:9));
+plot(ax2, force_N(1:9), fit_y, '--', 'Color', [1.0, 0.6, 0.2], 'LineWidth', 1.5, ...
+    'DisplayName', sprintf('Linear Fit: Sensitivity S = %.2f mV/N', p(1)));
+
+title(ax2, 'Real-Time Signal Characteristic in SI Derived Unit (Force in Newtons)', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax2, 'Mechanical Applied Force, F = m \cdot g (N) [SI Derived]', 'Color', 'w', 'FontSize', 10);
+ylabel(ax2, 'Output Voltage, Average\_mV (mV)', 'Color', 'w', 'FontSize', 10);
+grid(ax2, 'on'); box(ax2, 'on'); ax2.GridColor = [0.4 0.4 0.4]; ax2.GridAlpha = 0.5;
+legend(ax2, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'southeast');
+xlim(ax2, [-5, 105]); ylim(ax2, [0, 3600]);
+hold(ax2, 'off');

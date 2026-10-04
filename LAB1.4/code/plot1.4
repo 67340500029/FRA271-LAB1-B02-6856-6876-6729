@@ -1,0 +1,66 @@
+% =========================================================================
+% MATLAB Script: Repeatability & Precision Analysis (Run 1 vs Run 2 vs Run 3)
+% =========================================================================
+clear; clc; close all;
+
+% 1. ข้อมูลการทดลองทำซ้ำ 3 รอบจาก Excel
+actual_kg = 0:10; % มวลอ้างอิงจากเครื่องชั่ง Digital (kg)
+
+run1_kg = [0.468834, 1.076147, 2.323527, 3.574087, 4.759983, 5.806700, 7.578703, 8.921032, 10.376480, 11.678090, 11.739080]; %
+run2_kg = [0.556892, 1.868942, 2.094256, 3.296752, 4.517782, 7.259850, 8.320408, 9.803370, 10.882460, 11.737620, 11.717800]; %
+run3_kg = [-0.122070, 1.010849, 2.443214, 3.543038, 4.947760, 6.402521, 7.740272, 8.955820, 10.834830, 11.687430, 11.739620]; %
+
+std_dev_kg = [0.369216, 0.477687, 0.177324, 0.151952, 0.215562, 0.730486, 0.390041, 0.499679, 0.279394, 0.032017, 0.012444]; %
+std_dev_mv = [101.9811, 131.9419, 48.97853, 41.97061, 59.54049, 201.7676, 107.7331, 138.0163, 77.17132, 8.843359, 3.437119]; %
+
+% -------------------------------------------------------------------------
+% สร้าง Figure แบบ Dark Theme แบ่ง 2 Subplots
+% -------------------------------------------------------------------------
+fig = figure('Color', 'k', 'Position', [100, 100, 950, 680]);
+
+% --- Subplot 1: เปรียบเทียบผลการวัดแต่ละรอบ (Run 1, Run 2, Run 3) ---
+ax1 = subplot(2, 1, 1, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax1, 'on');
+
+plot(ax1, actual_kg, run1_kg, '-o', 'Color', [0.35, 0.7, 1.0], 'LineWidth', 1.8, ...
+    'MarkerSize', 6, 'MarkerFaceColor', [0.35, 0.7, 1.0], 'DisplayName', 'Run 1');
+plot(ax1, actual_kg, run2_kg, '-s', 'Color', [1.0, 0.65, 0.2], 'LineWidth', 1.8, ...
+    'MarkerSize', 6, 'MarkerFaceColor', [1.0, 0.65, 0.2], 'DisplayName', 'Run 2');
+plot(ax1, actual_kg, run3_kg, '-^', 'Color', [0.2, 0.9, 0.4], 'LineWidth', 1.8, ...
+    'MarkerSize', 6, 'MarkerFaceColor', [0.2, 0.9, 0.4], 'DisplayName', 'Run 3');
+plot(ax1, actual_kg, actual_kg, '--', 'Color', [0.8, 0.8, 0.8], 'LineWidth', 1.2, ...
+    'DisplayName', 'Ideal Reference (1:1)');
+
+title(ax1, 'Repeatability Test: Individual Runs (Run 1, Run 2, Run 3) vs. Reference Mass', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax1, 'Actual Reference Mass, Actual\_kg (kg)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax1, 'Measured Mass (kg)', 'Color', 'w', 'FontSize', 10);
+grid(ax1, 'on'); box(ax1, 'on'); ax1.GridColor = [0.4 0.4 0.4]; ax1.GridAlpha = 0.5;
+legend(ax1, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'northwest');
+xlim(ax1, [-0.5, 10.5]); ylim(ax1, [-0.5, 13]);
+hold(ax1, 'off');
+
+% --- Subplot 2: การวิเคราะห์ความแม่นยำในการวัดซ้ำ (Precision & Standard Deviation) ---
+ax2 = subplot(2, 1, 2, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax2, 'on');
+
+yyaxis(ax2, 'left');
+b1 = bar(ax2, actual_kg - 0.15, std_dev_kg, 0.3, 'FaceColor', [0.35, 0.7, 1.0], 'EdgeColor', 'none', ...
+    'DisplayName', 'StdDev\_kg (kg)');
+ylabel(ax2, 'Standard Deviation of Mass, SD_{kg} (kg)', 'Color', [0.35, 0.7, 1.0], 'FontSize', 10);
+ax2.YColor = [0.35, 0.7, 1.0];
+ylim(ax2, [0, 0.95]);
+
+yyaxis(ax2, 'right');
+b2 = bar(ax2, actual_kg + 0.15, std_dev_mv, 0.3, 'FaceColor', [1.0, 0.4, 0.4], 'EdgeColor', 'none', ...
+    'DisplayName', 'StdDev\_mV (mV)');
+ylabel(ax2, 'Standard Deviation of Voltage, SD_{mV} (mV)', 'Color', [1.0, 0.4, 0.4], 'FontSize', 10);
+ax2.YColor = [1.0, 0.4, 0.4];
+ylim(ax2, [0, 240]);
+
+title(ax2, 'Precision Analysis: Standard Deviation across Repeats (N=3)', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax2, 'Actual Reference Mass, Actual\_kg (kg)', 'Color', 'w', 'FontSize', 10);
+grid(ax2, 'on'); box(ax2, 'on'); ax2.GridColor = [0.4 0.4 0.4]; ax2.GridAlpha = 0.5;
+xlim(ax2, [-0.5, 10.5]);
+hold(ax2, 'off');

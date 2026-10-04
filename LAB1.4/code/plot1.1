@@ -1,0 +1,64 @@
+% =========================================================================
+% MATLAB Script: Load Cell Measured Weight vs. Digital Scale Weight
+% =========================================================================
+clear; clc; close all;
+
+% 1. ข้อมูลการทดลองจาก Excel
+actual_kg     = 0:10; % มวลอ้างอิงจากเครื่องชั่ง Digital (kg)
+average_kg    = [0.301217, 1.318646, 2.286999, 3.471292, 4.741842, ...
+    6.489691, 7.879795, 9.226741, 10.697920, 11.701050, 11.732170]; %
+error_mean_kg = [0.301217, 0.318646, 0.286999, 0.471292, 0.741842, ...
+    1.489691, 1.879795, 2.226741, 2.697924, 2.701049, 1.732166]; %
+std_dev_kg    = [0.369216, 0.477687, 0.177324, 0.151952, 0.215562, ...
+    0.730486, 0.390041, 0.499679, 0.279394, 0.032017, 0.012444]; %
+
+% -------------------------------------------------------------------------
+% สร้าง Figure แบบ Dark Theme แบ่ง 2 Subplots
+% -------------------------------------------------------------------------
+fig = figure('Color', 'k', 'Position', [100, 100, 950, 650]);
+
+% --- Subplot 1: กราฟเปรียบเทียบน้ำหนัก (Measured vs Actual) ---
+ax1 = subplot(2, 1, 1, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax1, 'on');
+
+% เส้นอ้างอิงอุดมคติ Ideal 1:1 (เส้นประสีขาว)
+plot(ax1, actual_kg, actual_kg, '--', 'Color', [0.8 0.8 0.8], 'LineWidth', 1.5, ...
+    'DisplayName', 'Ideal Line (Digital Scale 1:1)');
+
+% พล็อตค่าจริงจาก Load Cell พร้อม Error Bars (SD)
+errorbar(ax1, actual_kg, average_kg, std_dev_kg, '-o', 'Color', [0.35, 0.7, 1.0], ...
+    'LineWidth', 2.0, 'MarkerSize', 6, 'MarkerFaceColor', [0.35, 0.7, 1.0], ...
+    'CapSize', 4, 'DisplayName', 'Load Cell Measured Weight (\pm SD)');
+
+% แสดงจุดอิ่มตัว Saturation (ที่ 9-10 kg)
+xline(ax1, 8.5, ':', 'Saturation Region', 'Color', [1.0 0.4 0.4], ...
+    'LineWidth', 1.5, 'LabelOrientation', 'horizontal', 'LabelVerticalAlignment', 'bottom');
+
+title(ax1, 'Comparison: Load Cell Measured Weight vs. Digital Reference Scale', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax1, 'Actual Weight from Digital Scale, Actual\_kg (kg)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax1, 'Measured Weight, Average\_kg (kg)', 'Color', 'w', 'FontSize', 10);
+grid(ax1, 'on'); box(ax1, 'on'); ax1.GridColor = [0.4 0.4 0.4]; ax1.GridAlpha = 0.5;
+legend(ax1, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'northwest');
+xlim(ax1, [-0.5, 10.5]); ylim(ax1, [0, 13]);
+hold(ax1, 'off');
+
+% --- Subplot 2: กราฟแท่งแสดงค่าความคลาดเคลื่อน (Absolute Mean Error) ---
+ax2 = subplot(2, 1, 2, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax2, 'on');
+
+b = bar(ax2, actual_kg, error_mean_kg, 0.5, 'FaceColor', [1.0, 0.65, 0.2], 'EdgeColor', 'none');
+
+title(ax2, 'Absolute Error across Mass Range (Error\_Mean\_kg)', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax2, 'Actual Weight from Digital Scale, Actual\_kg (kg)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax2, 'Absolute Error (kg)', 'Color', 'w', 'FontSize', 10);
+grid(ax2, 'on'); box(ax2, 'on'); ax2.GridColor = [0.4 0.4 0.4]; ax2.GridAlpha = 0.5;
+xlim(ax2, [-0.5, 10.5]); ylim(ax2, [0, 3.2]);
+
+% ใส่ตัวเลขแสดงค่า Error บนแต่ละแท่ง
+for i = 1:length(actual_kg)
+    text(ax2, actual_kg(i), error_mean_kg(i) + 0.12, sprintf('%.2f', error_mean_kg(i)), ...
+        'Color', 'w', 'FontSize', 8, 'HorizontalAlignment', 'center');
+end
+hold(ax2, 'off');

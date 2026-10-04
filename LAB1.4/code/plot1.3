@@ -1,0 +1,84 @@
+% =========================================================================
+% MATLAB Script: Amplifier Gain (Av) vs Gain Resistance (Rg) Analysis
+% =========================================================================
+clear; clc; close all;
+
+% 1. กำหนดพารามิเตอร์ของวงจร (Instrumentation Amplifier / 2 Op-Amp)
+R1 = 10000;              % ความต้านทานป้อนกลับภายใน (10 kOhm)
+V_offset = 140.5992;     % แรงดันออฟเซตเริ่มต้น (mV)
+V_sat = 3300.0;          % เพดานแรงดันอิ่มตัว (mV)
+S_exp = (3012.273 - V_offset) / 8.0; % ความไวการวัดเดิม = 358.96 mV/kg
+
+% 2. คำนวณหาค่า Gain และ Rg เดิมของการทดลอง (อ้างอิง Av_exp = 1000)
+Av_exp = 1000;
+Rg_exp = (2 * R1) / (Av_exp - 1); % Rg = 20.02 Ohm
+S_bridge = S_exp / Av_exp;        % ความไวจริงจาก Strain Bridge = 0.359 mV/kg
+
+% 3. คำนวณหา Gain และ Rg ที่เหมาะสมที่สุด (Optimal) สำหรับ 10 kg
+m_target = 10.0; % มวลเป้าหมายสูงสุด (kg)
+Delta_V_max = V_sat - V_offset;    % สวิงแรงดันสูงสุดที่ยอมรับได้ = 3159.4 mV
+S_opt = Delta_V_max / m_target;    % ความไวเป้าหมาย = 315.94 mV/kg
+Av_opt = S_opt / S_bridge;         % Optimal Gain = 880.16
+Rg_opt = (2 * R1) / (Av_opt - 1);  % Optimal Rg = 22.75 Ohm
+
+% 4. สร้างขอบเขตช่วงค่า Rg สำหรับพล็อตกราฟ (15 ถึง 60 Ohm)
+Rg_vec = linspace(15, 60, 300);
+Av_vec = 1 + (2 * R1) ./ Rg_vec;
+m_sat_vec = Delta_V_max ./ (Av_vec .* S_bridge); % มวลสูงสุดก่อนอิ่มตัว
+
+% -------------------------------------------------------------------------
+% สร้าง Figure แบบ Dark Theme แบ่ง 2 Subplots
+% -------------------------------------------------------------------------
+fig = figure('Color', 'k', 'Position', [100, 100, 950, 680]);
+
+% --- Subplot 1: กราฟความสัมพันธ์ระหว่าง Gain (Av) กับ Rg ---
+ax1 = subplot(2, 1, 1, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax1, 'on');
+
+plot(ax1, Rg_vec, Av_vec, 'LineWidth', 2.2, 'Color', [0.35, 0.7, 1.0], ...
+    'DisplayName', 'A_v = 1 + (2R_1 / R_G)');
+
+% จุดทดลองเดิม (Experimental Point)
+plot(ax1, Rg_exp, Av_exp, 'rX', 'MarkerSize', 10, 'LineWidth', 2, ...
+    'DisplayName', sprintf('Experimental (A_v=%.0f, R_G=%.2f \\Omega)', Av_exp, Rg_exp));
+
+% จุดเหมาะสมที่สุด (Optimal Point)
+plot(ax1, Rg_opt, Av_opt, 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g', ...
+    'DisplayName', sprintf('Optimal Target (A_v=%.1f, R_G=%.2f \\Omega)', Av_opt, Rg_opt));
+
+title(ax1, 'Amplifier Gain (A_v) vs. Gain Resistance (R_G) [Inverse Relationship]', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax1, 'Gain Resistance, R_G (\Omega)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax1, 'Amplifier Gain, A_v (V/V)', 'Color', 'w', 'FontSize', 10);
+grid(ax1, 'on'); box(ax1, 'on'); ax1.GridColor = [0.4 0.4 0.4]; ax1.GridAlpha = 0.5;
+legend(ax1, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'northeast');
+xlim(ax1, [15, 60]); ylim(ax1, [300, 1400]);
+hold(ax1, 'off');
+
+% --- Subplot 2: มวลสูงสุดก่อนเข้าสู่สภาวะแรงดันอิ่มตัว (m_sat) vs Rg ---
+ax2 = subplot(2, 1, 2, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax2, 'on');
+
+plot(ax2, Rg_vec, m_sat_vec, 'LineWidth', 2.2, 'Color', [1.0, 0.65, 0.2], ...
+    'DisplayName', 'Measurable Mass Limit before Saturation (m_{sat})');
+
+% เส้นเป้าหมายมวล 10 kg
+yline(ax2, 10.0, '--', 'Target Max Weight (10 kg)', 'Color', [0.2, 0.9, 0.4], ...
+    'LineWidth', 1.5, 'LabelHorizontalAlignment', 'left');
+
+% เส้นจุดวิกฤตของทดลองเดิม
+xline(ax2, Rg_exp, ':', sprintf('Current R_G (%.2f \\Omega) \\rightarrow Sat @ 8.8 kg', Rg_exp), ...
+    'Color', [1.0, 0.4, 0.4], 'LineWidth', 1.5);
+
+% เส้นจุดวิกฤตที่เหมาะสม
+xline(ax2, Rg_opt, ':', sprintf('Optimal R_G (%.2f \\Omega) \\rightarrow Full 10 kg', Rg_opt), ...
+    'Color', [0.2, 0.9, 0.4], 'LineWidth', 1.5);
+
+title(ax2, 'Maximum Measurable Mass Range before Op-Amp Saturation vs. R_G', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax2, 'Gain Resistance, R_G (\Omega)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax2, 'Max Measurable Mass, m_{sat} (kg)', 'Color', 'w', 'FontSize', 10);
+grid(ax2, 'on'); box(ax2, 'on'); ax2.GridColor = [0.4 0.4 0.4]; ax2.GridAlpha = 0.5;
+legend(ax2, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'southeast');
+xlim(ax2, [15, 60]); ylim(ax2, [6, 20]);
+hold(ax2, 'off');

@@ -1,0 +1,72 @@
+% =========================================================================
+% MATLAB Script: Graph 5 - Real-Time Dynamic Response & Calibration Stream
+% =========================================================================
+clear; clc; close all;
+
+% 1. ข้อมูล Log File จากการทดลอง real-time calibration ตามลำดับเวลา
+time_s      = [11.34415, 23.94605, 31.01941, 40.69905, 48.60313, 60.97421, 67.16172, 74.01474, 81.37809, 90.24729, 111.9401]; %
+actual_kg   = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; %
+measured_kg = [0.271213, 1.613554, 2.801289, 4.062745, 5.289250, 6.517965, 7.747117, 9.020872, 10.239810, 11.461390, 11.739480]; %
+measured_mv = [132.3116, 503.0797, 831.1440, 1179.5710, 1518.3440, 1857.7270, 2197.2310, 2549.0550, 2885.7370, 3223.1520, 3299.9620]; %
+error_kg    = [0.271213, 0.613554, 0.801289, 1.062745, 1.289250, 1.517965, 1.747117, 2.020872, 2.239805, 2.461394, 1.739482]; %
+
+% 2. คำนวณแรงกดเชิงกลในหน่วย SI Derived (Force in Newtons, F = m * g)
+g_acc = 9.81; % ความเร่งเนื่องจากแรงโน้มถ่วง (m/s^2)
+force_N = measured_kg * g_acc;
+
+% -------------------------------------------------------------------------
+% สร้าง Figure Dark Theme แบ่ง 2 Subplots
+% -------------------------------------------------------------------------
+fig = figure('Color', 'k', 'Position', [100, 100, 980, 720]);
+
+% --- Subplot 1: Real-Time Signal Output vs Elapsed Time ---
+ax1 = subplot(2, 1, 1, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax1, 'on');
+
+yyaxis(ax1, 'left');
+plot(ax1, time_s, measured_mv, '-o', 'Color', [0.35, 0.75, 1.0], 'LineWidth', 2, ...
+    'MarkerSize', 7, 'MarkerFaceColor', [0.35, 0.75, 1.0], 'DisplayName', 'Output Voltage (mV)');
+ylabel(ax1, 'Output Voltage, V_{out} (mV)', 'Color', [0.35, 0.75, 1.0], 'FontSize', 10);
+ax1.YColor = [0.35, 0.75, 1.0];
+ylim(ax1, [0, 3600]);
+
+% เส้นขอบ Saturation Ceiling 3.3V
+yline(ax1, 3300, '--', 'Color', [1.0, 0.3, 0.3], 'LineWidth', 1.5, ...
+    'DisplayName', 'Saturation Ceiling (V_{sat} \approx 3.3 V)');
+
+yyaxis(ax1, 'right');
+plot(ax1, time_s, force_N, '-s', 'Color', [0.2, 0.9, 0.4], 'LineWidth', 2, ...
+    'MarkerSize', 7, 'MarkerFaceColor', [0.2, 0.9, 0.4], 'DisplayName', 'Applied Force (N)');
+ylabel(ax1, 'Mechanical Force, F = m \cdot g (N) [SI Derived]', 'Color', [0.2, 0.9, 0.4], 'FontSize', 10);
+ax1.YColor = [0.2, 0.9, 0.4];
+ylim(ax1, [0, 125]);
+
+title(ax1, 'Graph 5A: Real-Time Signal & Mechanical Force Response over Elapsed Time', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax1, 'Elapsed Time (seconds)', 'Color', 'w', 'FontSize', 10);
+grid(ax1, 'on'); box(ax1, 'on'); ax1.GridColor = [0.4 0.4 0.4]; ax1.GridAlpha = 0.5;
+legend(ax1, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'northwest');
+xlim(ax1, [5, 120]);
+hold(ax1, 'off');
+
+% --- Subplot 2: Real-Time Mass Calibration Tracking & Absolute Error Stream ---
+ax2 = subplot(2, 1, 2, 'Parent', fig, 'Color', 'k', 'XColor', 'w', 'YColor', 'w');
+hold(ax2, 'on');
+
+plot(ax2, time_s, actual_kg, '--k', 'Color', [0.8 0.8 0.8], 'LineWidth', 1.5, ...
+    'DisplayName', 'Reference Mass (Actual\_kg)');
+plot(ax2, time_s, measured_kg, '-d', 'Color', [1.0, 0.7, 0.2], 'LineWidth', 2, ...
+    'MarkerSize', 7, 'MarkerFaceColor', [1.0, 0.7, 0.2], 'DisplayName', 'Measured Mass (Measured\_kg)');
+
+% พล็อตกราฟแท่งแสดง Absolute Error
+bar(ax2, time_s, error_kg, 1.8, 'FaceColor', [0.9, 0.3, 0.3], 'EdgeColor', 'none', ...
+    'FaceAlpha', 0.6, 'DisplayName', 'Absolute Error (Error\_kg)');
+
+title(ax2, 'Graph 5B: Real-Time Calibration Tracking & Absolute Measurement Error Stream', ...
+    'Color', 'w', 'FontSize', 12, 'FontWeight', 'bold');
+xlabel(ax2, 'Elapsed Time (seconds)', 'Color', 'w', 'FontSize', 10);
+ylabel(ax2, 'Mass & Measurement Error (kg)', 'Color', 'w', 'FontSize', 10);
+grid(ax2, 'on'); box(ax2, 'on'); ax2.GridColor = [0.4 0.4 0.4]; ax2.GridAlpha = 0.5;
+legend(ax2, 'TextColor', 'w', 'Color', 'none', 'EdgeColor', 'w', 'Location', 'northwest');
+xlim(ax2, [5, 120]); ylim(ax2, [0, 14]);
+hold(ax2, 'off');
